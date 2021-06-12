@@ -1,0 +1,100 @@
+version: '3'
+
+networks:
+    laravel:
+
+services:
+    nginx:
+        image: nginx:stable-alpine
+        container_name: nginx_awesomeproject.com
+        ports:
+            - "1010:80"
+        volumes:
+            - ./src:/var/www/html
+            - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+        depends_on: 
+            - php
+            - mysql
+            - phpmyadmin
+        networks:
+            - laravel
+    php:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: php_awesomeproject.com
+        volumes:
+            - ./src:/var/www/html
+        ports:
+            - "1000:9000"
+        networks:
+            - laravel
+    mysql:
+        image: mysql:5.7.22
+        container_name: mysql_awesomeproject.com
+        restart: unless-stopped
+        tty: true
+        ports: 
+            - "1306:3306"
+        volumes:
+            - ~/mysql_awesomeproject.com:/var/lib/mysql
+        environment:
+            MYSQL_DATABASE: homestead
+            MYSQL_USER: homestead
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: secret
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        networks:
+            - laravel
+
+    artisan:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: artisan_awesomeproject.com
+        volumes:
+            - ./src:/var/www/html
+        depends_on:
+            - mysql
+        working_dir: /var/www/html
+        entrypoint: ['/var/www/html/artisan']
+        networks:
+            - laravel
+
+    composer:
+        image: composer:latest
+        container_name: composer_awesomeproject.com
+        volumes:
+            - ./src:/var/www/html
+        working_dir: /var/www/html
+        depends_on:
+            - php
+        networks:
+            - laravel
+        
+    npm:
+        image: node:13.7
+        container_name: npm_awesomeproject.com
+        volumes:
+            - ./src:/var/www/html
+        working_dir: /var/www/html
+        entrypoint: ['npm']
+        networks:
+            - laravel
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: phpmyadmin_awesomeproject.com
+        restart: always
+        depends_on:
+            - mysql
+        ports:
+            - 1011:80
+        environment:
+            PMA_HOST: mysql
+            PMA_USER: root
+            PMA_PASSWORD: secret            
+            PMA_ARBITRARY: 1
+        networks:
+            - laravel   
